@@ -1,3 +1,5 @@
+import java.lang.NumberFormatException
+
 fun main(){
 
     println("==simple ssg 시작==")
@@ -13,8 +15,8 @@ fun main(){
                 break
             }
             "/article/detail" -> {
-                println("rq.actionPath : ${rq.actionPath}")
-                println("rq.paramMap : ${rq.paramMap}")
+                println(rq.getStringParam("title", "1") == "1")
+                println(rq.getIntParam("id", -1) == -1)
             }
 
         }
@@ -29,6 +31,7 @@ fun main(){
 fun readLineTrim() = readLine()!!.trim()
 
 class Rq(cmd : String){
+
     val actionPath : String
     val paramMap : Map<String, String>
 
@@ -66,13 +69,35 @@ class Rq(cmd : String){
 
     }
 
+    fun getStringParam(name: String, default : String): String {
 
+        return if(paramMap[name] == null){
+            default
+        }else{
+            paramMap[name]!!
+        }
 
+//        return paramMap[name] ?: default // 엘비스 연산자
 
+//        return try{
+//            paramMap[name]!!
+//        }catch(e : NullPointerException){
+//            default
+//        }
 
+    }
 
-
-
+    fun getIntParam(name: String, default : Int): Int {
+        return if(paramMap[name] == null){
+            default
+        }else{
+            try{
+                paramMap[name]!!.toInt()
+            }catch(e : NumberFormatException){
+                default
+            }
+        }
+    }
 
 
 }
