@@ -2,12 +2,26 @@ import java.lang.NumberFormatException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+val articles = mutableListOf<Article>()
+var lastId = 0
+
+val members = mutableListOf<Member>()
+var memberLastId = 0
+
+
+val articleRepository = ArticleRepository()
+val memberRepository = MemberRepository()
+
 fun main(){
+
+
     val articleController = ArticleController()
+    val memberController = MemberController()
 
     println("==simple ssg 시작==")
 
     articleRepository.makeTestArticles()
+    memberRepository.makeTestMembers()
 
     while(true){
         print("명령어 : ")
@@ -35,7 +49,7 @@ fun main(){
                 articleController.modify(rq)
             }
             "/member/join" -> {
-
+                memberController.join()
             }
 
         }
@@ -45,6 +59,59 @@ fun main(){
 
     println("==simple ssg 끝==")
 
+}
+
+data class Member(
+    val id : Int,
+    val loginId : String,
+    val loginPw : String,
+    val name : String,
+    val nickName : String,
+    val regDate : String
+)
+
+class MemberRepository{
+    fun addMember(loginId: String, loginPw: String, name: String, nickName: String) : Int{
+        val id = ++memberLastId
+        val regDate = Util.getDateNowStr()
+        members.add(Member(id, loginId, loginPw, name, nickName, regDate))
+        return id
+    }
+
+    fun isJoinableloginId(loginId: String) : Boolean{
+        for(member in members){
+            if(member.loginId == loginId){
+                return false
+            }
+        }
+        return true
+    }
+
+    fun makeTestMembers(){
+        for(i in 1..10){
+            addMember("user$i", "user$i", "홍길동$i", "사용자$i")
+        }
+    }
+}
+
+class MemberController{
+    fun join(){
+        print("사용할 아이디 : ")
+        val loginId = readLineTrim()
+        val isJoinable = memberRepository.isJoinableloginId(loginId)
+        if(isJoinable == false){
+            println("사용중인 아이디 입니다.")
+            return
+        }
+        print("사용할 비밀번호 입력 : ")
+        val loginPw = readLineTrim()
+        print("이름 입력 : ")
+        val name = readLineTrim()
+        print("사용할 별명 입력 :")
+        val nickName = readLineTrim()
+        val id = memberRepository.addMember(loginId, loginPw, name, nickName)
+        println("$id 번 회원으로 가입되었습니다.")
+    }
 }
 
 
@@ -57,10 +124,8 @@ data class Article(
     var updateDate : String
 )
 
-object articleRepository{
+class ArticleRepository{
 
-    val articles = mutableListOf<Article>()
-    var lastId = 0
 
     fun addArticle(title:String, body:String) : Int{
         val id = ++lastId
