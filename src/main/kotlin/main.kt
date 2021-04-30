@@ -8,6 +8,9 @@ var lastId = 0
 val members = mutableListOf<Member>()
 var memberLastId = 0
 
+var loginedMember : Member? = null
+var loginedMemberId = 0
+
 
 val articleRepository = ArticleRepository()
 val memberRepository = MemberRepository()
@@ -24,7 +27,12 @@ fun main(){
     memberRepository.makeTestMembers()
 
     while(true){
-        print("명령어 : ")
+        val prompt = if(loginedMember == null){
+            "명령어 : "
+        }else{
+            "${loginedMember!!.nickName})"
+        }
+        print(prompt)
         val cmd = readLineTrim()
         val rq = Rq(cmd)
 
@@ -51,6 +59,13 @@ fun main(){
             "/member/join" -> {
                 memberController.join()
             }
+            "/member/login"-> {
+                memberController.login()
+            }
+            "/member/logout" -> {
+                memberController.logout()
+            }
+
 
         }
 
@@ -78,13 +93,19 @@ class MemberRepository{
         return id
     }
 
-    fun isJoinableloginId(loginId: String) : Boolean{
+    fun getMemberByLoginId(loginId : String) : Member?{
         for(member in members){
             if(member.loginId == loginId){
-                return false
+                return member
             }
         }
-        return true
+        return null
+    }
+
+    fun isJoinableloginId(loginId: String) : Boolean{
+        val member = getMemberByLoginId(loginId)
+
+        return member == null
     }
 
     fun makeTestMembers(){
@@ -100,7 +121,7 @@ class MemberController{
         val loginId = readLineTrim()
         val isJoinable = memberRepository.isJoinableloginId(loginId)
         if(isJoinable == false){
-            println("사용중인 아이디 입니다.")
+            println("사용중인 아이디입니다.")
             return
         }
         print("사용할 비밀번호 입력 : ")
@@ -110,7 +131,32 @@ class MemberController{
         print("사용할 별명 입력 :")
         val nickName = readLineTrim()
         val id = memberRepository.addMember(loginId, loginPw, name, nickName)
-        println("$id 번 회원으로 가입되었습니다.")
+        println("$id 번 회원으로 가입 완료")
+    }
+
+    fun login() {
+        print("아이디 입력 : ")
+        val loginId = readLineTrim()
+        val member = memberRepository.getMemberByLoginId(loginId)
+        if(member == null){
+            println("없는 아이디 입니다.")
+            return
+        }
+        print("비밀번호 입력 : ")
+        val loginPw = readLineTrim()
+        if(member.loginPw != loginPw){
+            println("비밀번호가 틀립니다.")
+            return
+        }
+        println("${member.nickName} 님 환영합니다.")
+        loginedMember = member
+        loginedMemberId = member.id
+    }
+
+    fun logout() {
+        loginedMember = null
+        loginedMemberId = 0
+        println("로그아웃")
     }
 }
 
@@ -200,6 +246,10 @@ class ArticleRepository{
 
 class ArticleController{
     fun add(){
+        if(loginedMember == null){
+            println("로그인 후 이용해주세요")
+            return
+        }
         print("제목 : ")
         val title = readLineTrim()
         print("내용 : ")
@@ -210,6 +260,10 @@ class ArticleController{
     }
 
     fun list(rq : Rq){
+        if(loginedMember == null){
+            println("로그인 후 이용해주세요")
+            return
+        }
         val page = rq.getIntParam("page", 1)
         val keyword = rq.getStringParam("keyword", "")
 
@@ -220,6 +274,10 @@ class ArticleController{
     }
 
     fun detail(rq : Rq){
+        if(loginedMember == null){
+            println("로그인 후 이용해주세요")
+            return
+        }
         val id = rq.getIntParam("id",0)
 
         if(id == 0){
@@ -240,6 +298,10 @@ class ArticleController{
     }
 
     fun delete(rq : Rq){
+        if(loginedMember == null){
+            println("로그인 후 이용해주세요")
+            return
+        }
         val id = rq.getIntParam("id",0)
 
         if(id == 0){
@@ -256,6 +318,10 @@ class ArticleController{
     }
 
     fun modify(rq : Rq){
+        if(loginedMember == null){
+            println("로그인 후 이용해주세요")
+            return
+        }
         val id = rq.getIntParam("id",0)
 
         if(id == 0){
