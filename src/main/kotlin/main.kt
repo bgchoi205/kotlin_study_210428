@@ -9,7 +9,6 @@ val members = mutableListOf<Member>()
 var memberLastId = 0
 
 var loginedMember : Member? = null
-var loginedMemberId = 0
 
 
 val articleRepository = ArticleRepository()
@@ -67,6 +66,7 @@ fun main(){
             }
 
 
+
         }
 
     }
@@ -113,6 +113,15 @@ class MemberRepository{
             addMember("user$i", "user$i", "홍길동$i", "사용자$i")
         }
     }
+
+    fun getMemberById(id : Int): Member? {
+        for(member in members){
+            if(member.id == id){
+                return member
+            }
+        }
+        return null
+    }
 }
 
 class MemberController{
@@ -150,12 +159,10 @@ class MemberController{
         }
         println("${member.nickName} 님 환영합니다.")
         loginedMember = member
-        loginedMemberId = member.id
     }
 
     fun logout() {
         loginedMember = null
-        loginedMemberId = 0
         println("로그아웃")
     }
 }
@@ -166,6 +173,7 @@ data class Article(
     val id : Int,
     var title : String,
     var body : String,
+    val memberId : Int,
     val regDate : String,
     var updateDate : String
 )
@@ -173,20 +181,18 @@ data class Article(
 class ArticleRepository{
 
 
-    fun addArticle(title:String, body:String) : Int{
+    fun addArticle(title:String, body:String, memberId : Int) : Int{
         val id = ++lastId
         val regDate = Util.getDateNowStr()
         val updateDate = Util.getDateNowStr()
-        articles.add(Article(id, title, body, regDate, updateDate))
+        articles.add(Article(id, title, body, memberId, regDate, updateDate))
 
         return id
     }
 
     fun makeTestArticles(){
         for(i in 1..50){
-            val title = "제목$i"
-            val body = "내용$i"
-            addArticle(title,body)
+            addArticle("제목$i","내용$i", i % 9 + 1)
         }
     }
 
@@ -246,7 +252,8 @@ class ArticleRepository{
 
 class ArticleController{
     fun add(){
-        if(loginedMember == null){
+        val member = loginedMember
+        if(member == null){
             println("로그인 후 이용해주세요")
             return
         }
@@ -254,7 +261,8 @@ class ArticleController{
         val title = readLineTrim()
         print("내용 : ")
         val body = readLineTrim()
-        val id = articleRepository.addArticle(title,body)
+        val memberId = member.id
+        val id = articleRepository.addArticle(title,body, memberId)
 
         println("$id 번 게시물이 등록되었습니다.")
     }
@@ -268,8 +276,11 @@ class ArticleController{
         val keyword = rq.getStringParam("keyword", "")
 
         val filteredArticles = articleRepository.getFilteredArticles(keyword, page, 10)
+
         for(article in filteredArticles){
-            println("번호 : ${article.id} / 제목 : ${article.title} / 등록날짜 : ${article.regDate}")
+            val member = memberRepository.getMemberById(article.memberId)!!
+            val nickName = member.nickName
+            println("번호 : ${article.id} / 제목 : ${article.title} / 작성자 : ${nickName} / 등록날짜 : ${article.regDate}")
         }
     }
 
@@ -314,6 +325,10 @@ class ArticleController{
             println("존재하지 않는 게시물입니다.")
             return
         }
+        if(loginedMember!!.id != article.memberId){
+            println("권한이 없습니다.")
+            return
+        }
         articleRepository.deleteArticle(article)
     }
 
@@ -331,6 +346,10 @@ class ArticleController{
         val article = articleRepository.getArticleById(id)
         if(article == null){
             println("존재하지 않는 게시물입니다.")
+            return
+        }
+        if(loginedMember!!.id != article.memberId){
+            println("권한이 없습니다.")
             return
         }
         print("새 제목 : ")
